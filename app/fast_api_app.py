@@ -20,6 +20,8 @@ import google.auth
 from a2a.server.tasks import InMemoryTaskStore
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from google.adk.cli.fast_api import get_fast_api_app
 from google.adk.runners import Runner
 from google.cloud import logging as google_cloud_logging
@@ -47,6 +49,9 @@ allow_origins = (
 )
 
 AGENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_STATIC_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "static"
+)
 
 
 @contextlib.asynccontextmanager
@@ -87,6 +92,17 @@ app: FastAPI = get_fast_api_app(
 )
 app.title = "investment-copilot"
 app.description = "API for interacting with the Agent investment-copilot"
+
+if os.path.exists(FRONTEND_STATIC_DIR):
+    app.mount(
+        "/static", StaticFiles(directory=FRONTEND_STATIC_DIR), name="frontend_static"
+    )
+
+    @app.get("/dev-ui/", include_in_schema=False)
+    @app.get("/dev-ui/index.html", include_in_schema=False)
+    async def serve_rebranded_index():
+        index_path = os.path.join(FRONTEND_STATIC_DIR, "index.html")
+        return FileResponse(index_path)
 
 
 # Proxy routes so the Vertex AI Console Playground (reasoning_engine SDK) can
